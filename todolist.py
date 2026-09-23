@@ -13,6 +13,7 @@ st.set_page_config(
     layout="centered"
 ) 
 
+st.markdown("Deployed by Niraj Gupta")
 st.title("✅ Todo Manager")
 st.markdown("""
 <style>
