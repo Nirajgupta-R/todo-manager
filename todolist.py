@@ -58,8 +58,12 @@ url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
 
 if not url or not key:
-    st.error("Supabase URL or Key not found.")
-    st.stop()
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+    except Exception:
+        st.error("Supabase URL or Key not found.")
+        st.stop()
 
 supabase: Client = create_client(url, key)
 
