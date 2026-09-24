@@ -13,8 +13,8 @@ st.set_page_config(
     layout="centered"
 ) 
 
-st.markdown("Deployed by Niraj Gupta")
-st.title("✅ Todo Manager")
+st.caption("Built & deployed by Niraj Gupta")
+st.title("✅ Task Management Dashboard")
 st.markdown("""
 <style>
 
@@ -55,6 +55,33 @@ div.stButton > button {
     width: 100%;
 }
 
+/* Statistics */
+.stats-container {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    margin: 15px 0;
+}
+
+.stat-box {
+    flex: 1;
+    background: #FFEBCD;
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 10px 5px;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+}
+
 /* Mobile */
 @media (max-width: 640px) {
 
@@ -68,10 +95,26 @@ div.stButton > button {
         font-size: 15px;
     }
 
+    .stats-container {
+        gap: 5px;
+    }
+
+    .stat-box {
+        padding: 8px 2px;
+    }
+
+    .stat-label {
+        font-size: 10px;
+    }
+
+    .stat-value {
+        font-size: 20px;
+    }
 }
 
 </style>
 """, unsafe_allow_html=True)
+
 
 
 st.caption("Manage your daily tasks with Supabase")
@@ -281,42 +324,24 @@ elif sort_option == "Due Date":
 
 # Todo Statistics
 total_tasks = len(todos)
+
 completed_tasks = sum(
-    1 for todo in todos
-    if todo.get("completed", False)
+    1 for todo in todos if todo.get("completed", False)
 )
+
 pending_tasks = total_tasks - completed_tasks
 
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.metric(
-        label="📋 Total",
-        value=total_tasks
-    )
-
-with col2:
-    st.metric(
-        label="✅ Completed",
-        value=completed_tasks
-    )
-
-with col3:
-    st.metric(
-        label="⏳ Pending",
-        value=pending_tasks
-    )
+# Statistics
+st.markdown(
+    f"""<div class="stats-container"><div class="stat-box"><div class="stat-label">📋 Total</div><div class="stat-value">{total_tasks}</div></div><div class="stat-box"><div class="stat-label">✅ Completed</div><div class="stat-value">{completed_tasks}</div></div><div class="stat-box"><div class="stat-label">⏳ Pending</div><div class="stat-value">{pending_tasks}</div></div></div>""",
+    unsafe_allow_html=True
+)
 
 # Progress
 if total_tasks > 0:
     progress = completed_tasks / total_tasks
-
-    st.write(
-        f"📊 Progress: {completed_tasks}/{total_tasks} tasks completed"
-    )
-
+    st.write(f"📊 Progress: {completed_tasks}/{total_tasks} tasks completed")
     st.progress(progress)
-
 else:
     st.write("📊 Progress: 0/0 tasks completed")
     st.progress(0)
@@ -365,16 +390,20 @@ if filtered_todos:
     
     for todo in filtered_todos:
 
-        # -----------------------------
-        # Task information
-        # -----------------------------
-
+        # Checkbox
         completed = st.checkbox(
-            "Completed",
+            "",
             value=todo.get("completed", False),
             key=f"todo_{todo['id']}"
         )
 
+        # Task name
+        task_text = todo["task"]
+
+        if completed:
+            task_text = f"<s>{task_text}</s>"
+
+        # Priority
         priority = todo.get("priority", "Medium")
 
         if priority == "High":
@@ -389,95 +418,50 @@ if filtered_todos:
             priority_class = "priority-low"
             priority_text = "🟢 Low"
 
-        due_date = todo.get("due_date")
-        task_text = todo["task"]
-
-        # Completed task
-        if completed:
-            task_text = f"<s>{task_text}</s>"
-
-        # -----------------------------
-        # Task Card
-        # -----------------------------
-
+        # TASK CARD
         st.markdown(
-            f"""
-            <div class="task-card">
-
-                <div class="task-title">
-                    {task_text}
-                </div>
-
-                <div class="{priority_class}">
-                    {priority_text}
-                </div>
-
-            </div>
-            """,
+            f"""<div class="task-card">
+<div class="task-title">{task_text}</div>
+<div class="{priority_class}">{priority_text}</div>
+</div>""",
             unsafe_allow_html=True
         )
 
-        # -----------------------------
-        # Due Date
-        # -----------------------------
+        # Database update
+        if completed != todo.get("completed", False):
+            update_todo(todo["id"], completed)
+            st.rerun()
+
+        # Due date
+        due_date = todo.get("due_date")
 
         if due_date:
-
             due_date_obj = date.fromisoformat(str(due_date))
 
             if not completed and due_date_obj < date.today():
-
                 st.caption("⚠️ Overdue")
-
             else:
-
                 st.caption(f"📅 Due: {due_date}")
 
-        # -----------------------------
-        # Database update
-        # -----------------------------
-
-        if completed != todo.get("completed", False):
-
-            update_todo(
-                todo["id"],
-                completed
-            )
-
-            st.rerun()
-
-        # -----------------------------
-        # Edit / Delete buttons
-        # -----------------------------
-
+        # Buttons
         edit_col, delete_col = st.columns(2)
 
         with edit_col:
-
             if st.button(
                 "✏️ Edit",
                 key=f"edit_{todo['id']}"
             ):
-
-                st.session_state[
-                    f"editing_{todo['id']}"
-                ] = True
+                st.session_state[f"editing_{todo['id']}"] = True
 
         with delete_col:
-
             if st.button(
                 "🗑️ Delete",
                 key=f"delete_{todo['id']}"
             ):
-
                 delete_todo(todo["id"])
-
                 st.rerun()
 
-        # -----------------------------
         # Edit mode
-        # -----------------------------
-
         if st.session_state.get(
             f"editing_{todo['id']}",
             False
@@ -522,21 +506,12 @@ if filtered_todos:
                         f"editing_{todo['id']}"
                     ] = False
 
-                    st.success(
-                        "Task updated!"
-                    )
-
                     st.rerun()
 
                 else:
+                    st.error("Task cannot be empty.")
 
-                    st.error(
-                        "Task cannot be empty."
-                    )
-
-        # Divider between tasks
         st.divider()
 
 else:
-
-    st.info("No matching tasks found.")
+    st.info("No matching tasks found.") 
