@@ -65,7 +65,7 @@ div.stButton > button {
 
 .stat-box {
     flex: 1;
-    background: #FFEBCD;
+    background: #A9A9A9;
     border: 1px solid #444;
     border-radius: 10px;
     padding: 10px 5px;
