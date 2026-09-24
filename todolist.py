@@ -19,16 +19,20 @@ st.markdown("""
 <style>
 
 .task-card {
-    background-color: #f8f9fa;
-    padding: 12px;
+    background: #ffffff;
+    padding: 14px;
     border-radius: 12px;
     border: 1px solid #ddd;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
+    color: #222222;
 }
 
 .task-title {
     font-size: 16px;
     font-weight: 600;
+    color: #222222;
+    margin-bottom: 6px;
+    word-wrap: break-word;
 }
 
 .priority-high {
@@ -44,6 +48,26 @@ st.markdown("""
 .priority-low {
     color: #388e3c;
     font-weight: bold;
+}
+
+/* Buttons */
+div.stButton > button {
+    width: 100%;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+
+    .task-card {
+        padding: 12px;
+        margin-bottom: 6px;
+        border-radius: 10px;
+    }
+
+    .task-title {
+        font-size: 15px;
+    }
+
 }
 
 </style>
@@ -338,82 +362,126 @@ if st.session_state.get("confirm_delete_all", False):
 
 
 if filtered_todos:
+    
     for todo in filtered_todos:
 
-        col1, col2, col3 = st.columns([5, 1, 1])
+        # -----------------------------
+        # Task information
+        # -----------------------------
 
-        with col1:
+        completed = st.checkbox(
+            "Completed",
+            value=todo.get("completed", False),
+            key=f"todo_{todo['id']}"
+        )
 
-            # Checkbox + Task ko same line me rakhne ke liye
-            check_col, task_col = st.columns([0.5, 5])
+        priority = todo.get("priority", "Medium")
 
-            with check_col:
-                completed = st.checkbox(
-                    "",
-                    value=todo.get("completed", False),
-                    key=f"todo_{todo['id']}"
-                )
+        if priority == "High":
+            priority_class = "priority-high"
+            priority_text = "🔴 High"
 
-            with task_col:
-                priority = todo.get("priority", "Medium")
-                if priority == "High":
-                    priority_class = "priority-high"
-                    priority_text = "🔴 High"
+        elif priority == "Medium":
+            priority_class = "priority-medium"
+            priority_text = "🟡 Medium"
 
-                elif priority == "Medium":
-                    priority_class = "priority-medium"
-                    priority_text = "🟡 Medium"
-                else:
-                    priority_class = "priority-low"
-                    priority_text = "🟢 Low"
+        else:
+            priority_class = "priority-low"
+            priority_text = "🟢 Low"
 
-                due_date = todo.get("due_date")
-                task_text = todo["task"]
+        due_date = todo.get("due_date")
+        task_text = todo["task"]
 
-                if completed:
-                    task_text = f"<s>{task_text}</s>"
-                
-                st.markdown(
-                    f"""
-                    <div class="task-card">
-                        <div class = "task-title">
-                            {task_text}
-                        </div>
-                        <div class="{priority_class}">
-                            {priority_text}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+        # Completed task
+        if completed:
+            task_text = f"<s>{task_text}</s>"
 
-                if due_date:
-                    due_date_obj = date.fromisoformat(str(due_date))
+        # -----------------------------
+        # Task Card
+        # -----------------------------
 
-                    if not completed and due_date_obj < date.today():
-                        st.caption("⚠️ Overdue")
-                    else:
-                        st.caption(f"📅 Due: {due_date}")
+        st.markdown(
+            f"""
+            <div class="task-card">
 
+                <div class="task-title">
+                    {task_text}
+                </div>
 
-            # Database update
-            if completed != todo.get("completed", False):
-                update_todo(todo["id"], completed)
-                st.rerun()
+                <div class="{priority_class}">
+                    {priority_text}
+                </div>
 
-        # Edit button
-        with col2:
-            if st.button("✏️", key=f"edit_{todo['id']}"):
-                st.session_state[f"editing_{todo['id']}"] = True
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-        # Delete button
-        with col3:
-            if st.button("🗑️", key=f"delete_{todo['id']}"):
+        # -----------------------------
+        # Due Date
+        # -----------------------------
+
+        if due_date:
+
+            due_date_obj = date.fromisoformat(str(due_date))
+
+            if not completed and due_date_obj < date.today():
+
+                st.caption("⚠️ Overdue")
+
+            else:
+
+                st.caption(f"📅 Due: {due_date}")
+
+        # -----------------------------
+        # Database update
+        # -----------------------------
+
+        if completed != todo.get("completed", False):
+
+            update_todo(
+                todo["id"],
+                completed
+            )
+
+            st.rerun()
+
+        # -----------------------------
+        # Edit / Delete buttons
+        # -----------------------------
+
+        edit_col, delete_col = st.columns(2)
+
+        with edit_col:
+
+            if st.button(
+                "✏️ Edit",
+                key=f"edit_{todo['id']}"
+            ):
+
+                st.session_state[
+                    f"editing_{todo['id']}"
+                ] = True
+
+        with delete_col:
+
+            if st.button(
+                "🗑️ Delete",
+                key=f"delete_{todo['id']}"
+            ):
+
                 delete_todo(todo["id"])
+
                 st.rerun()
 
+        # -----------------------------
         # Edit mode
-        if st.session_state.get(f"editing_{todo['id']}", False):
+        # -----------------------------
+
+        if st.session_state.get(
+            f"editing_{todo['id']}",
+            False
+        ):
 
             new_task = st.text_input(
                 "Edit task:",
@@ -421,28 +489,54 @@ if filtered_todos:
                 key=f"input_{todo['id']}"
             )
 
-            current_priority = todo.get("priority", "Medium")
+            current_priority = todo.get(
+                "priority",
+                "Medium"
+            )
 
             new_priority = st.selectbox(
                 "Priority:",
                 ["Low", "Medium", "High"],
-                index=["Low", "Medium", "High"].index(current_priority),
+                index=[
+                    "Low",
+                    "Medium",
+                    "High"
+                ].index(current_priority),
                 key=f"priority_{todo['id']}"
             )
 
-            if st.button("💾 Save", key=f"save_{todo['id']}"):
+            if st.button(
+                "💾 Save",
+                key=f"save_{todo['id']}"
+            ):
 
                 if new_task.strip():
-                    update_task(todo["id"], new_task.strip(), new_priority)
 
+                    update_task(
+                        todo["id"],
+                        new_task.strip(),
+                        new_priority
+                    )
 
-                    st.session_state[f"editing_{todo['id']}"] = False
+                    st.session_state[
+                        f"editing_{todo['id']}"
+                    ] = False
 
-                    st.success("Task updated!")
+                    st.success(
+                        "Task updated!"
+                    )
+
                     st.rerun()
 
                 else:
-                    st.error("Task cannot be empty.")
+
+                    st.error(
+                        "Task cannot be empty."
+                    )
+
+        # Divider between tasks
+        st.divider()
 
 else:
+
     st.info("No matching tasks found.")
